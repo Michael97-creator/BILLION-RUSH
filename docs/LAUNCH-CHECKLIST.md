@@ -1,0 +1,36 @@
+# Launch checklist
+- [ ] Apply all migrations to a fresh staging project
+- [ ] Verify RLS with player/reviewer/admin accounts
+- [ ] Confirm `correct_option` is never exposed to player endpoints
+- [ ] Test duplicate submissions and idempotency
+- [ ] Test timer expiry at network boundaries
+- [ ] Test two users starting the same match concurrently
+- [ ] Test simultaneous answers and round resolution
+- [ ] Test reconnect during every multiplayer phase
+- [ ] Import/review at least 1,000 questions before launch
+- [ ] Review country question coverage and expand the country catalog/question pools beyond the prototype set
+- [ ] Publish privacy policy and terms
+- [ ] Configure analytics/crash monitoring
+- [ ] Confirm Version 1 remains ad-free; reconsider AdMob only for a later release
+- [ ] Apply store migration `0018_billion_rush_store.sql` and deploy server-side Paystack/inventory functions
+- [ ] Verify regular lifeline packages at ₦200 for 1 use and ₦500 for 3 uses per lifeline
+- [ ] Verify Extra Time at ₦200 for 1 use / ₦800 for 5 uses and Second Chance at ₦300 for 1 use / ₦500 for 2 uses
+- [ ] Verify server-side grants are idempotent and purchased item consumption is atomic
+- [ ] Verify no free Extra Time or Second Chance, and enforce the five-use / two-use per-game caps
+- [ ] Verify payment provider support for each target country/currency and platform billing rules
+- [ ] Confirm refunds/chargebacks and failed/cancelled checkouts do not leave paid entitlements active
+- [ ] Keep NGN as default display; do not promise foreign-currency checkout until provider configuration is confirmed
+- [ ] Test anti-cheat invalidation when the active app is backgrounded, switched, locked, or left
+- [ ] Confirm active runs are never restored, while leaving results screens does not invalidate results
+- [ ] Build and test Android APK/AAB on physical devices
+- [ ] Load test Edge Functions and database
+- [ ] Verify backups and recovery
+- [ ] Complete Play Store listing/compliance
+
+## Online score sharing release gate
+- [ ] Apply migration `0017_anonymous_score_sharing.sql`.
+- [ ] Deploy `create-solo-share` and `get-solo-share` Edge Functions.
+- [ ] Set Vite Supabase URL and public key; rebuild and deploy the full `dist` directory.
+- [ ] Verify a generated result link opens in a private browser without login.
+- [ ] Verify native share / copy fallback and PNG score-card download on Android.
+- [ ] Confirm shared results are described as unverified player-submitted scores.

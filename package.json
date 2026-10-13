@@ -1,0 +1,29 @@
+{
+  "name": "billion-rush",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "verify": "node tools/verify.mjs",
+    "test:rules": "node --test tests/game-rules.test.mjs",
+    "dev": "npm --prefix billion-rush run dev",
+    "build": "npm --prefix billion-rush run build",
+    "preview": "npm --prefix billion-rush run preview",
+    "serve:player": "npm --prefix billion-rush run dev",
+    "serve:studio": "python3 -m http.server 4174 -d apps/studio",
+    "android:add": "npx cap add android",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build:debug": "npm run android:sync && cd android && ./gradlew assembleDebug"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0"
+  }
+}

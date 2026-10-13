@@ -1,0 +1,31 @@
+# Public anonymous endpoints. Each function validates its own request and applies
+# application-level limits; no user account is required by the solo-player game.
+[functions.create-solo-share]
+verify_jwt = false
+
+[functions.get-solo-share]
+verify_jwt = false
+
+[functions.generate-player-questions]
+verify_jwt = false
+
+[functions.generate-player-lifeline]
+verify_jwt = false
+
+[functions.paystack-initialize]
+verify_jwt = false
+
+[functions.paystack-verify]
+verify_jwt = false
+
+[functions.get-store-inventory]
+verify_jwt = false
+
+[functions.consume-store-item]
+verify_jwt = false
+
+[functions.submit-leaderboard-score]
+verify_jwt = false
+
+[functions.get-community-leaderboard]
+verify_jwt = false

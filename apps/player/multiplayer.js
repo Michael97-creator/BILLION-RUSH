@@ -1,0 +1,15 @@
+const state={phase:'waiting',round:1,timeLeft:30,score:0,answered:false,opponentOnline:true};
+const $=id=>document.getElementById(id);
+function show(id,on=true){$(id).classList.toggle('hidden',!on)}
+function notice(msg){$('notice').textContent=msg;show('notice',true);setTimeout(()=>show('notice',false),2200)}
+function setConnection(online){$('connection').textContent=online?'● CONNECTED':'● RECONNECTING';$('connection').className='pill '+(online?'online':'');state.opponentOnline=online;notice(online?'Connection restored':'Connection interrupted — reconnecting…')}
+function enterMatch(){state.phase='game';show('waiting',false);show('game',true);renderQuestion({text:'Multiplayer question payload will be supplied by the realtime engine.',options:['Option A','Option B','Option C','Option D']});startTimer()}
+function renderQuestion(q){$('round').textContent=state.round;$('score').textContent=state.score.toLocaleString();$('questionText').textContent=q.text;$('options').innerHTML=q.options.map((x,i)=>`<button class="option" data-option="${String.fromCharCode(65+i)}">${String.fromCharCode(65+i)}. ${x}</button>`).join('');document.querySelectorAll('.option').forEach(b=>b.onclick=()=>submitAnswer(b.dataset.option));state.answered=false;show('reveal',false)}
+function submitAnswer(option){if(state.answered||state.timeLeft<=0)return;state.answered=true;document.querySelectorAll('.option').forEach(b=>b.classList.add('locked'));notice(`Answer ${option} locked. Waiting for reveal…`);window.dispatchEvent(new CustomEvent('billionrush:answer',{detail:{option,round:state.round}}))}
+function startTimer(){clearInterval(state.interval);state.timeLeft=30;const tick=()=>{$('timer').textContent=state.timeLeft;if(state.timeLeft<=0){clearInterval(state.interval);if(!state.answered){state.answered=true;document.querySelectorAll('.option').forEach(b=>b.classList.add('locked'));notice('Time expired — waiting for server reveal.')}}state.timeLeft--};tick();state.interval=setInterval(tick,1000)}
+function applyReveal(data){show('reveal',true);$('reveal').textContent=data.message||'Round revealed by server.';if(data.correctOption){document.querySelectorAll('.option').forEach(b=>{if(b.dataset.option===data.correctOption)b.classList.add('correct')})}if(data.nextQuestion){state.round++;renderQuestion(data.nextQuestion);startTimer()}}
+function finish(data){clearInterval(state.interval);show('game',false);show('result',true);$('resultTitle').textContent=data.title||'Match Complete';$('finalScore').textContent=`₦${Number(data.score||state.score).toLocaleString()}`;$('survived').textContent=`${data.survived||0}/20`}
+window.BillionRushMultiplayer={enterMatch,renderQuestion,applyReveal,finish,setConnection};
+$('rematch').onclick=()=>{show('result',false);show('waiting',true);notice('Rematch request ready for the server.')};
+// Development preview only. Production wiring comes from Stage 13 realtime events.
+setTimeout(()=>{if(state.phase==='waiting'){ $('opponentName').textContent='Opponent';$('opponentStatus').textContent='Connected';notice('Opponent found');setTimeout(enterMatch,900)}},900);

@@ -1,0 +1,6 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const $=id=>document.getElementById(id);let client;
+const savedUrl=localStorage.getItem('BR_SUPABASE_URL')||'';const savedKey=localStorage.getItem('BR_SUPABASE_ANON_KEY')||'';$('sburl').value=savedUrl;$('sbkey').value=savedKey;
+function setup(){const u=$('sburl').value.trim(),k=$('sbkey').value.trim();if(!u||!k)throw Error('Enter your Supabase URL and anon key.');localStorage.setItem('BR_SUPABASE_URL',u);localStorage.setItem('BR_SUPABASE_ANON_KEY',k);client=createClient(u,k);return client}
+async function act(kind){try{const c=setup();const email=$('email').value.trim(),password=$('password').value;if(!email||!password)throw Error('Email and password are required.');const r=kind==='login'?await c.auth.signInWithPassword({email,password}):await c.auth.signUp({email,password});if(r.error)throw r.error;if(r.data.session){localStorage.setItem('BR_ACCESS_TOKEN',r.data.session.access_token);$('authmsg').textContent='Signed in. You can start playing.';}else $('authmsg').textContent='Account created. Check your email if confirmation is enabled.';}catch(e){$('authmsg').textContent=e.message}}
+$('login').onclick=()=>act('login');$('signup').onclick=()=>act('signup');
