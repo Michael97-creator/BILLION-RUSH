@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite'
-import { resolve } from 'node:path'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const appDir = dirname(fileURLToPath(import.meta.url))
 
 // Explicit multi-page build: each HTML entry is emitted to dist.
 export default defineConfig({
@@ -7,11 +10,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        home: resolve(__dirname, 'index.html'),
-        login: resolve(__dirname, 'login.html'),
-        multiplayer: resolve(__dirname, 'multiplayer.html'),
-        studio: resolve(__dirname, 'studio.html'),
-        result: resolve(__dirname, 'result.html'),
+        home: resolve(appDir, 'index.html'),
+        login: resolve(appDir, 'login.html'),
+        multiplayer: resolve(appDir, 'multiplayer.html'),
+        studio: resolve(appDir, 'studio.html'),
+        result: resolve(appDir, 'result.html'),
       },
     },
   },

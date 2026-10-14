@@ -1,5 +1,5 @@
 {
-  "name": "billion-rush",
+  "name": "billion-rush-project",
   "private": true,
   "version": "1.0.0",
   "scripts": {
@@ -13,7 +13,9 @@
     "android:add": "npx cap add android",
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
-    "android:build:debug": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:build:debug": "npm run android:sync && cd android && gradlew assembleDebug",
+    "android:build:debug:windows": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "doctor": "node tools/preflight.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.0"
@@ -25,5 +27,8 @@
     "@capacitor/filesystem": "^8.0.0",
     "@capacitor/app": "^8.0.0",
     "@capacitor/browser": "^8.0.0"
-  }
+  },
+  "workspaces": [
+    "billion-rush"
+  ]
 }

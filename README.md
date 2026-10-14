@@ -20,12 +20,11 @@ An active Rush is never saved or restored. Leaving the app, switching apps, lock
 ## Local setup
 
 1. Install a current Node.js LTS release.
-2. From the repository root, run `npm install`.
-3. Install the web app dependencies with `npm --prefix billion-rush install`.
+2. From the repository root, run `npm install`. The root package now uses npm workspaces to install the app dependencies together.
 4. Copy `billion-rush/.env.example` to `billion-rush/.env.local` and set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and the deployed `VITE_PUBLIC_APP_URL` when available.
 5. Run `npm run dev` to start the existing Vite app.
 6. Run `npm run test:rules` and `npm run verify` for automated checks.
-7. Run `npm run build` once dependencies are installed.
+7. Run `npm run build` to build the web app into `billion-rush/dist`.
 
 ## Store deployment
 
@@ -33,4 +32,4 @@ Follow `docs/STORE-SETUP.md`. Apply `supabase/migrations/0018_billion_rush_store
 
 ## Android packaging
 
-The project uses Capacitor and Android Studio, but the Android project has not been generated in this source archive yet. After installing dependencies and configuring the website/backend, run `npm run build`, then `npm run android:add` once, `npm run android:sync`, and `npm run android:open`. Test the resulting app on a real Android phone before creating a signed release APK.
+The project uses Capacitor and Android Studio, but the Android project has not been generated in this source archive yet. After installing Node.js and dependencies, open a terminal at the repository root and run `npm install`, then `npm run build`. The Capacitor config is `capacitor.config.json`; do not run `npx cap init` again for this existing project. Run `npm run android:add` once, then `npm run android:sync` and `npm run android:open`. On Windows, build a debug APK from Command Prompt/PowerShell with `npm run android:build:debug:windows` after Android has been added and Android Studio/SDK are configured. Test the resulting app on a real Android phone before creating a signed release APK.
