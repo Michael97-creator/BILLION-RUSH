@@ -53,11 +53,35 @@ Deno.serve(async req => {
     const localRows = poolRows.filter((q:any)=>(q.tags as string[]).includes(countryTag));
     const regionalRows = poolRows.filter((q:any)=>(q.tags as string[]).includes(regionTag) && !(q.tags as string[]).includes(countryTag));
     const worldRows = poolRows.filter((q:any)=>(q.tags as string[]).includes("scope:world"));
-    const existingPublic = [
-      ...localRows.slice(0,Math.ceil(count*0.3)),
-      ...regionalRows.slice(0,Math.ceil(count*0.3)),
-      ...worldRows
-    ].filter((q:any,i:number,a:any[])=>a.findIndex((x:any)=>x.id===q.id)===i).slice(0,count).map(asPublic);
+    // Select across categories in round-robin order, not simply newest-first.
+    // This prevents one generated topic (including English) from crowding out others.
+    const fairByCategory = (rows:any[], limit:number) => {
+      const buckets = new Map<string, any[]>();
+      for (const row of rows) {
+        const category = String(row.category || "General Knowledge");
+        if (!buckets.has(category)) buckets.set(category, []);
+        buckets.get(category)!.push(row);
+      }
+      const categories = [...buckets.keys()].sort(() => Math.random() - 0.5);
+      const picked:any[] = [];
+      while (picked.length < limit) {
+        let progressed = false;
+        for (const category of categories) {
+          if (picked.length >= limit) break;
+          const bucket = buckets.get(category)!;
+          if (bucket.length) { picked.push(bucket.shift()); progressed = true; }
+        }
+        if (!progressed) break;
+      }
+      return picked;
+    };
+    const selectedPool = [
+      ...fairByCategory(localRows, Math.ceil(count*0.3)),
+      ...fairByCategory(regionalRows, Math.ceil(count*0.3)),
+    ];
+    const selectedIds = new Set(selectedPool.map((q:any)=>q.id));
+    selectedPool.push(...fairByCategory(worldRows.filter((q:any)=>!selectedIds.has(q.id)), count-selectedPool.length));
+    const existingPublic = selectedPool.filter((q:any,i:number,a:any[])=>a.findIndex((x:any)=>x.id===q.id)===i).slice(0,count).map(asPublic);
     const out:any[] = [...existingPublic];
     if (out.length >= count) return json({ questions:out, generated:0, reused:out.length, requested:count, source:"existing validated question pools" });
 
@@ -67,7 +91,7 @@ Deno.serve(async req => {
     if (!allowed) return json({ questions:out, generated:0, reused:out.length, requested:count, note:"Fresh-question limit reached for this device today; returning available pool questions." }, out.length ? 200 : 429);
 
     const generateCount = count - out.length;
-    const prompt = `Generate ${generateCount} original multiple-choice trivia questions for Billion Rush. Player country: ${country}. Player region: ${region}. Create a balanced mix of country-relevant, regional, and world knowledge; at least half should not depend on local knowledge. Category mix should cover science, technology, history, geography, culture, sports, entertainment, general knowledge, and English Language. Include challenging adult-level English spelling, advanced grammar, punctuation, usage, sentence structure, subject–verb agreement, conditionals, idiomatic distinctions, and commonly confused words; these must be genuinely difficult rather than elementary vocabulary drills, and should appear more often at hard/very_hard levels. For spelling variants, state the English convention (for example British English) whenever variants differ by region. Difficulty must vary randomly across easy, medium, hard, very_hard. Questions must be factual, unambiguous, age-appropriate, self-contained, not about fast-changing current officeholders or statistics, and have exactly four distinct plausible options with exactly one defensible correct answer. Avoid trick wording and duplicates. Do not invent sources. Include a concise explanation and a credible source title or URL only if you know it reliably. For each item, set scope to local (specific to the player's country), regional (relevant to the player's region but not only one country), or world (globally relevant). Return JSON only: {"questions":[{"questionText":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctOption":"A|B|C|D","explanation":"...","category":"...","difficulty":"easy|medium|hard|very_hard","scope":"local|regional|world","sourceReference":"..."}]}`;
+    const prompt = `Generate ${generateCount} original multiple-choice trivia questions for Billion Rush. Player country: ${country}. Player region: ${region}. Create a balanced mix of country-relevant, regional, and world knowledge; at least half should not depend on local knowledge. Distribute questions as evenly as feasible across the available topics; do not favour English by question count. Use a broad, explicit topic taxonomy and balance categories over each batch: science, technology, history, geography, culture, sports, film and television, entertainment, art and architecture, business and economics, general knowledge, country and regional knowledge, nature, astronomy, mathematics, literature, music, English spelling, English grammar, English vocabulary and usage, difficult riddles and logic, food and cuisine, mythology, philosophy, psychology, inventions and discoveries, and politics and civics. Include adult-level English spelling and grammar as one important topic family, not the default. Do not generate more than one question per category in a batch unless the requested count exceeds the number of available categories; rotate topics between batches and respect category variety in stored-pool selection. Use these exact canonical category names whenever applicable: Science, Technology, History, Geography, Culture, Sports, Film & Television, Entertainment, Art & Architecture, Business & Economics, General Knowledge, Africa, Nigeria, Ghana, Kenya, India, United Kingdom, United States, Nature, Astronomy, Mathematics, Literature, Music, English Spelling, English Grammar, English Vocabulary & Usage, Riddles & Logic, Food & Cuisine, Mythology, Philosophy, Psychology, Inventions & Discoveries, and Politics & Civics. Preserve existing country and regional topics when relevant. Include genuinely challenging adult-level English spelling, advanced grammar, punctuation, usage, sentence structure, subject–verb agreement, conditionals, idiomatic distinctions, and commonly confused words, especially in hard/very_hard tiers, without allowing English to dominate the overall pool. For spelling variants, state the English convention (for example British English) whenever variants differ by region. Difficulty must vary randomly across easy, medium, hard, very_hard. Questions must be factual, unambiguous, age-appropriate, self-contained, not about fast-changing current officeholders or statistics, and have exactly four distinct plausible options with exactly one defensible correct answer. Avoid trick wording and duplicates. Do not invent sources. Include a concise explanation and a credible source title or URL only if you know it reliably. For each item, set scope to local (specific to the player's country), regional (relevant to the player's region but not only one country), or world (globally relevant). Return JSON only: {"questions":[{"questionText":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctOption":"A|B|C|D","explanation":"...","category":"...","difficulty":"easy|medium|hard|very_hard","scope":"local|regional|world","sourceReference":"..."}]}`;
     const generated: any = parseJson(await gemini(prompt, { json: true, temperature: 0.85 }));
     if (!Array.isArray(generated.questions)) throw new Error("AI did not return a question array.");
 
@@ -92,8 +116,16 @@ Deno.serve(async req => {
     }
     const decisions = new Map((review.decisions as any[]).map((x:any)=>[Number(x.index),Boolean(x.pass)]));
 
+    const acceptedCategoryCounts = new Map<string, number>();
+    let acceptedEnglishCount = 0;
+    const perCategoryBatchCap = Math.max(1, Math.ceil(generateCount / 8));
+    const englishBatchCap = Math.max(1, Math.floor(count * 0.2));
     for (let i=0;i<candidates.length && out.length<count;i++) {
       const q=candidates[i];
+      const categoryKey = q.category.toLowerCase();
+      const isEnglishCategory = categoryKey.startsWith("english") || /spelling|grammar|vocabulary|punctuation|word usage/.test(categoryKey);
+      if ((acceptedCategoryCounts.get(categoryKey) || 0) >= perCategoryBatchCap) continue;
+      if (isEnglishCategory && acceptedEnglishCount >= englishBatchCap) continue;
       if (!q.questionText || q.questionText.length < 12 || q.questionText.length > 360) continue;
       if (q.options.some((x:string)=>!x || x.length>180) || new Set(q.options.map(normalize)).size!==4) continue;
       if (!letters.includes(q.correctOption as any) || !q.explanation || decisions.get(i) !== true) continue;
@@ -113,6 +145,8 @@ Deno.serve(async req => {
         q:inserted.question_text, a:[inserted.option_a,inserted.option_b,inserted.option_c,inserted.option_d],
         correct, explanation:inserted.explanation, generated:true
       });
+      acceptedCategoryCounts.set(categoryKey, (acceptedCategoryCounts.get(categoryKey) || 0) + 1);
+      if (isEnglishCategory) acceptedEnglishCount++;
     }
     return json({ questions: out.slice(0,count), generated: Math.max(0,out.length-existingPublic.length), reused:existingPublic.length, requested: count, source: "existing pools plus AI-generated and automatically filtered questions", note: "Automated checks reduce risk but do not guarantee every fact is correct." });
   } catch (error) {

@@ -1,0 +1,35 @@
+Total questions: 200
+Distinct topics: 32
+
+Africa: 8
+Art & Architecture: 4
+Astronomy: 8
+Billion Rush: 7
+Business & Economics: 4
+English Grammar: 12
+English Spelling: 14
+English Vocabulary & Usage: 4
+Film & Television: 4
+Food & Cuisine: 4
+General Knowledge: 6
+Geography: 6
+Ghana: 8
+History: 6
+India: 8
+Inventions & Discoveries: 4
+Kenya: 8
+Literature: 7
+Mathematics: 5
+Music: 7
+Mythology: 4
+Nature: 8
+Nigeria: 5
+Philosophy: 4
+Politics & Civics: 4
+Psychology: 4
+Riddles & Logic: 4
+Science: 5
+Sports: 7
+Technology: 5
+United Kingdom: 8
+United States: 8

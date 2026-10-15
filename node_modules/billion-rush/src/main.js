@@ -137,28 +137,43 @@ function countryPool(country, source = QUESTIONS) {
   const global = source.filter(q => !q.country && q.region !== region)
   const used = new Set()
   const picked = []
-  const categoryCounts = new Map()
-  const add = (pool, count) => {
+  const counts = new Map()
+  // Round-robin across topic buckets prevents a large category (including English)
+  // from dominating a run just because it has more rows in the static pool.
+  const addFairly = (pool, limit) => {
+    const buckets = new Map()
+    for (const q of shuffle(pool)) {
+      const key = q.category || 'General Knowledge'
+      if (!buckets.has(key)) buckets.set(key, [])
+      buckets.get(key).push(q)
+    }
+    const keys = shuffle([...buckets.keys()])
     let added = 0
-    const candidates = shuffle(pool)
-    // First pass favours categories that have appeared less often in this run.
-    for (const preferVariety of [true, false]) {
-      for (const q of candidates) {
-        if (picked.length >= TOTAL_QUESTIONS || added >= count) break
+    while (added < limit && picked.length < TOTAL_QUESTIONS) {
+      let madeProgress = false
+      for (const key of keys) {
+        if (added >= limit || picked.length >= TOTAL_QUESTIONS) break
+        const bucket = buckets.get(key)
+        const categoryCount = counts.get(key) || 0
+        const englishCount = [...counts.entries()].filter(([name]) => name.startsWith('English ')).reduce((sum, [, value]) => sum + value, 0)
+        // English remains challenging, but is capped as a family so its subcategories cannot dominate.
+        if (!bucket.length || categoryCount >= 4 || (key.startsWith('English ') && englishCount >= 8)) continue
+        const q = bucket.shift()
         if (used.has(q.id)) continue
-        const category = q.category || 'General Knowledge'
-        if (preferVariety && (categoryCounts.get(category) || 0) >= 4) continue
-        used.add(q.id); picked.push(q); added += 1
-        categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1)
+        used.add(q.id); picked.push(q); added += 1; madeProgress = true
+        counts.set(key, categoryCount + 1)
       }
+      // If this tier has no eligible category left, leave the remaining quota for the next tier.
+      // Never force extra questions from one category just to satisfy a local/regional quota.
+      if (!madeProgress) break
     }
   }
-  // Aim for local, regional and global knowledge, but never repeat a question in a run.
-  add(local, 10)
-  add(regional, 10)
-  add(global, TOTAL_QUESTIONS-picked.length)
-  add(source.filter(q => !used.has(q.id)), TOTAL_QUESTIONS-picked.length)
-  return picked.slice(0,TOTAL_QUESTIONS).map(q => ({...q, difficulty: Math.min(4, Number(q.difficulty) || 2)}))
+  // Preserve local/regional/global intent while applying the same category fairness to each tier.
+  addFairly(local, 10)
+  addFairly(regional, 10)
+  addFairly(global, TOTAL_QUESTIONS - picked.length)
+  addFairly(source.filter(q => !used.has(q.id)), TOTAL_QUESTIONS - picked.length)
+  return picked.slice(0,TOTAL_QUESTIONS).map(q => ({...q, difficulty: Math.min(5, Math.max(1, Number(q.difficulty) || 2))}))
 }
 
 function controlledDifficultyMix(items) {
@@ -319,7 +334,27 @@ function render() {
     <main class="stage">${screen==='profile-setup'?profileSetup():screen==='home'?home(saved):screen==='game'?game(q):screen==='lost'?lost():result()}</main>
     <footer><span><b>JUMI TECH</b> • BUILDING TECHNOLOGY THAT MOVES BUSINESS FORWARD</span><span>50 QUESTIONS • 30 SEC • ₦1B TOP PRIZE</span></footer>
     <div class="modal hidden" id="modal"><div class="modal-backdrop" id="modalBackdrop"></div><div class="modal-card"><button class="modal-close" id="closeModal">×</button><div id="modalContent"></div></div></div></div>`
+  showStartupSequenceOnce()
   bind()
+}
+
+function showStartupSequenceOnce() {
+  if (sessionStorage.getItem('billionRush.startupShown.v1')) return
+  sessionStorage.setItem('billionRush.startupShown.v1', '1')
+  const overlay = document.createElement('div')
+  overlay.className = 'startup-sequence'
+  overlay.setAttribute('role', 'presentation')
+  overlay.innerHTML = `<section class="startup-jumi"><img src="/jumi-tech-logo.png" alt="Jumi Tech"/><p>A Jumi Tech Production</p></section><section class="startup-game"><img src="/billion-rush-logo.png" alt="Billion Rush"/><p>THE ₦1 BILLION KNOWLEDGE CHALLENGE</p></section><div class="startup-glow"></div>`
+  document.body.appendChild(overlay)
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduced) {
+    overlay.classList.add('startup-show-game')
+    window.setTimeout(() => overlay.remove(), 900)
+    return
+  }
+  window.setTimeout(() => overlay.classList.add('startup-show-game'), 1350)
+  window.setTimeout(() => overlay.classList.add('startup-exit'), 3300)
+  window.setTimeout(() => overlay.remove(), 3900)
 }
 function profileSetup() {
   const countryOptions = COUNTRIES.map(c=>`<option value="${esc(c)}" ${c===playerProfile.country?'selected':''}>${esc(c)}</option>`).join('')

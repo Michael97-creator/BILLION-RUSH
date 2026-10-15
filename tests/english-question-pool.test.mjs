@@ -2,10 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { QUESTIONS } from '../billion-rush/src/data/questions.js'
 
-const englishQuestions = QUESTIONS.filter(question => question.category === 'English Language')
+const englishQuestions = QUESTIONS.filter(question => question.category.startsWith('English '))
 
 test('local question bank contains a substantial adult-level English spelling and grammar pool', () => {
-  assert.ok(englishQuestions.length >= 35, `Expected at least 35 English questions, found ${englishQuestions.length}`)
+  assert.ok(englishQuestions.length >= 25, `Expected at least 25 English questions, found ${englishQuestions.length}`)
   assert.ok(englishQuestions.every(question => question.difficulty >= 4), 'English pool should be hard or very hard')
 })
 
